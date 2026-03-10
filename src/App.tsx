@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { 
   Users, 
   LayoutDashboard, 
@@ -17,9 +17,44 @@ import {
   MessageSquare,
   MoreVertical,
   LogOut,
-  User
+  User as UserIcon,
+  Trash2,
+  Check,
+  X,
+  Info,
+  AlertTriangle,
+  CheckCircle2,
+  XCircle,
+  Mail,
+  Building2,
+  Lock,
+  Eye,
+  EyeOff
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
+import { 
+  AreaChart, 
+  Area, 
+  XAxis, 
+  YAxis, 
+  CartesianGrid, 
+  Tooltip, 
+  ResponsiveContainer,
+  BarChart,
+  Bar,
+  Cell,
+  PieChart,
+  Pie
+} from 'recharts';
+import type { User, AutomationRule, ExecutionLog, Permission, Notification, AnalyticsData } from './types';
+import { 
+  MOCK_USERS, 
+  MOCK_RULES, 
+  MOCK_LOGS, 
+  MOCK_PERMISSIONS, 
+  MOCK_NOTIFICATIONS, 
+  MOCK_ANALYTICS 
+} from './mockData';
 
 // --- Components ---
 
@@ -64,14 +99,17 @@ const SidebarItem = ({ icon: Icon, label, active, onClick }: any) => (
 
 // --- Views ---
 
-const UserDirectory = () => {
-  const users = [
-    { name: 'Alex Rivera', role: 'Admin', status: 'Active', lastActive: '2 mins ago', color: 'bg-primary/20 text-primary' },
-    { name: 'Jordan Smith', role: 'Editor', status: 'Active', lastActive: '1 hour ago', color: 'bg-slate-200' },
-    { name: 'Taylor Wong', role: 'Viewer', status: 'Inactive', lastActive: '2 days ago', color: 'bg-slate-200' },
-    { name: 'Morgan Lee', role: 'Admin', status: 'Active', lastActive: 'Just now', color: 'bg-primary/20 text-primary' },
-    { name: 'Casey Cross', role: 'Editor', status: 'Pending', lastActive: 'Never', color: 'bg-slate-200' },
-  ];
+const UserDirectory = ({ users, onAdd, onEdit, onDelete }: { 
+  users: User[], 
+  onAdd: () => void, 
+  onEdit: (user: User) => void, 
+  onDelete: (id: string) => void 
+}) => {
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 5;
+
+  const totalPages = Math.ceil(users.length / itemsPerPage);
+  const paginatedUsers = users.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
   return (
     <div className="space-y-6">
@@ -80,8 +118,8 @@ const UserDirectory = () => {
           <h2 className="text-4xl font-black uppercase tracking-tighter leading-none">Team Members</h2>
           <p className="font-bold text-slate-500 mt-2 uppercase text-sm">Manage your organization's users and their access levels.</p>
         </div>
-        <NeoButton variant="primary" className="px-6 py-3">
-          + Add User
+        <NeoButton variant="primary" className="px-6 py-3 flex items-center gap-2" onClick={onAdd}>
+          <Plus size={18} /> Add User
         </NeoButton>
       </div>
 
@@ -98,18 +136,21 @@ const UserDirectory = () => {
               </tr>
             </thead>
             <tbody className="divide-y-2 divide-black">
-              {users.map((user, i) => (
-                <tr key={i} className="hover:bg-slate-50 transition-colors">
+              {paginatedUsers.length > 0 ? paginatedUsers.map((user) => (
+                <tr key={user.id} className="hover:bg-slate-50 transition-colors">
                   <td className="p-4 border-r-2 border-black">
                     <div className="flex items-center gap-3">
                       <div className="w-10 h-10 neo-border bg-slate-200 overflow-hidden">
-                        <img src={`https://picsum.photos/seed/${user.name}/100`} alt={user.name} referrerPolicy="no-referrer" />
+                        <img src={user.avatar} alt={user.name} referrerPolicy="no-referrer" />
                       </div>
-                      <span className="font-black text-sm uppercase">{user.name}</span>
+                      <div className="flex flex-col">
+                        <span className="font-black text-sm uppercase">{user.name}</span>
+                        <span className="text-[10px] font-bold text-slate-400">{user.email}</span>
+                      </div>
                     </div>
                   </td>
                   <td className="p-4 border-r-2 border-black">
-                    <span className={`neo-border px-3 py-1 font-black text-[10px] uppercase ${user.color}`}>
+                    <span className={`neo-border px-3 py-1 font-black text-[10px] uppercase ${user.role === 'Admin' ? 'bg-primary/20 text-primary' : 'bg-slate-200'}`}>
                       {user.role}
                     </span>
                   </td>
@@ -121,27 +162,74 @@ const UserDirectory = () => {
                   </td>
                   <td className="p-4 border-r-2 border-black font-bold text-xs uppercase text-slate-500">{user.lastActive}</td>
                   <td className="p-4 text-center">
-                    <button className="neo-border px-4 py-1 font-black text-[10px] uppercase hover:bg-black hover:text-white transition-all">Edit</button>
+                    <div className="flex justify-center gap-2">
+                      <button 
+                        onClick={() => alert(`Viewing profile for ${user.name}`)}
+                        className="neo-border p-2 hover:bg-primary hover:text-white transition-all"
+                        title="View Profile"
+                      >
+                        <Eye size={14} />
+                      </button>
+                      <button 
+                        onClick={() => onEdit(user)}
+                        className="neo-border p-2 hover:bg-neo-yellow transition-all"
+                      >
+                        <Edit2 size={14} />
+                      </button>
+                      <button 
+                        onClick={() => onDelete(user.id)}
+                        className="neo-border p-2 hover:bg-neo-pink hover:text-white transition-all"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
                   </td>
                 </tr>
-              ))}
+              )) : (
+                <tr>
+                  <td colSpan={5} className="p-12 text-center font-black uppercase text-slate-400">No users found matching your search</td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>
       </NeoCard>
 
-      <div className="flex justify-center items-center gap-2">
-        <NeoButton variant="secondary" className="w-10 h-10 p-0 flex items-center justify-center"><ChevronLeft size={20} /></NeoButton>
-        <NeoButton variant="primary" className="w-10 h-10 p-0 flex items-center justify-center">1</NeoButton>
-        <NeoButton variant="secondary" className="w-10 h-10 p-0 flex items-center justify-center">2</NeoButton>
-        <NeoButton variant="secondary" className="w-10 h-10 p-0 flex items-center justify-center">3</NeoButton>
-        <NeoButton variant="secondary" className="w-10 h-10 p-0 flex items-center justify-center"><ChevronRight size={20} /></NeoButton>
-      </div>
+      {totalPages > 1 && (
+        <div className="flex justify-center items-center gap-2">
+          <NeoButton 
+            variant="secondary" 
+            className="w-10 h-10 p-0 flex items-center justify-center disabled:opacity-50"
+            onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+            disabled={currentPage === 1}
+          >
+            <ChevronLeft size={20} />
+          </NeoButton>
+          {[...Array(totalPages)].map((_, i) => (
+            <NeoButton 
+              key={i}
+              variant={currentPage === i + 1 ? 'primary' : 'secondary'} 
+              className="w-10 h-10 p-0 flex items-center justify-center"
+              onClick={() => setCurrentPage(i + 1)}
+            >
+              {i + 1}
+            </NeoButton>
+          ))}
+          <NeoButton 
+            variant="secondary" 
+            className="w-10 h-10 p-0 flex items-center justify-center disabled:opacity-50"
+            onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+            disabled={currentPage === totalPages}
+          >
+            <ChevronRight size={20} />
+          </NeoButton>
+        </div>
+      )}
     </div>
   );
 };
 
-const AnalyticsView = () => (
+const AnalyticsView = ({ data }: { data: AnalyticsData[] }) => (
   <div className="space-y-8">
     <div className="bg-primary/10 neo-border-thick p-8 neo-shadow">
       <h1 className="text-5xl md:text-7xl font-black uppercase leading-none tracking-tighter mb-4">
@@ -177,18 +265,46 @@ const AnalyticsView = () => (
 
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
       <NeoCard className="lg:col-span-2" title="Volume Trends">
-        <div className="h-64 flex items-end justify-between gap-2 mt-8">
-          {[40, 65, 80, 55, 95, 45, 70].map((h, i) => (
-            <div key={i} className="flex-1 bg-primary/20 neo-border relative group">
-              <div 
-                className="absolute bottom-0 left-0 right-0 bg-primary transition-all group-hover:bg-black" 
-                style={{ height: `${h}%` }}
-              ></div>
-            </div>
-          ))}
-        </div>
-        <div className="flex justify-between mt-4 text-[10px] font-black uppercase text-slate-500">
-          <span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span><span>Sun</span>
+        <div className="h-80 mt-8">
+          <ResponsiveContainer width="100%" height="100%">
+            <AreaChart data={data}>
+              <defs>
+                <linearGradient id="colorVolume" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#000" stopOpacity={0.3}/>
+                  <stop offset="95%" stopColor="#000" stopOpacity={0}/>
+                </linearGradient>
+              </defs>
+              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#eee" />
+              <XAxis 
+                dataKey="name" 
+                axisLine={false} 
+                tickLine={false} 
+                tick={{ fontSize: 10, fontWeight: 900, fill: '#64748b' }} 
+              />
+              <YAxis 
+                axisLine={false} 
+                tickLine={false} 
+                tick={{ fontSize: 10, fontWeight: 900, fill: '#64748b' }} 
+              />
+              <Tooltip 
+                contentStyle={{ 
+                  backgroundColor: '#fff', 
+                  border: '4px solid #000', 
+                  borderRadius: '0', 
+                  fontWeight: '900',
+                  textTransform: 'uppercase'
+                }} 
+              />
+              <Area 
+                type="monotone" 
+                dataKey="volume" 
+                stroke="#000" 
+                strokeWidth={4} 
+                fillOpacity={1} 
+                fill="url(#colorVolume)" 
+              />
+            </AreaChart>
+          </ResponsiveContainer>
         </div>
       </NeoCard>
 
@@ -216,31 +332,58 @@ const AnalyticsView = () => (
   </div>
 );
 
-const DashboardView = () => (
+const DashboardView = ({ rules, logs, analytics, onToggleRule, onViewAllRules, onCreateRule }: {
+  rules: AutomationRule[],
+  logs: ExecutionLog[],
+  analytics: AnalyticsData[],
+  onToggleRule: (id: string) => void,
+  onViewAllRules: () => void,
+  onCreateRule: () => void
+}) => (
   <div className="space-y-8">
     <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
       <div className="space-y-2">
         <h1 className="text-5xl font-black uppercase tracking-tighter leading-none">Automation<br/>Overview</h1>
-        <p className="text-lg font-bold bg-neo-green/30 inline-block px-2">SYSTEM STATUS: OPTIMAL // 24 ACTIVE NODES</p>
+        <p className="text-lg font-bold bg-neo-green/30 inline-block px-2">SYSTEM STATUS: OPTIMAL // {rules.filter(r => r.active).length} ACTIVE NODES</p>
       </div>
-      <NeoButton variant="primary" className="px-8 py-3">Create New Rule</NeoButton>
+      <NeoButton variant="primary" className="px-8 py-3" onClick={onCreateRule}>Create New Rule</NeoButton>
     </div>
 
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
       <div className="lg:col-span-2 space-y-6">
         <NeoCard title="System Performance">
-          <div className="h-64 relative flex items-end justify-between gap-1 mt-8">
-            {[30, 80, 45, 90, 65, 85, 40].map((h, i) => (
-              <div key={i} className="flex-1 bg-primary/10 neo-border relative group">
-                <div 
-                  className="absolute bottom-0 left-0 right-0 bg-primary transition-all group-hover:bg-neo-pink" 
-                  style={{ height: `${h}%` }}
-                ></div>
-              </div>
-            ))}
-          </div>
-          <div className="flex justify-between mt-4 text-xs font-black uppercase">
-            <span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span><span>Sun</span>
+          <div className="h-64 mt-8">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={analytics}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#eee" />
+                <XAxis 
+                  dataKey="name" 
+                  axisLine={false} 
+                  tickLine={false} 
+                  tick={{ fontSize: 10, fontWeight: 900, fill: '#64748b' }} 
+                />
+                <YAxis 
+                  axisLine={false} 
+                  tickLine={false} 
+                  tick={{ fontSize: 10, fontWeight: 900, fill: '#64748b' }} 
+                />
+                <Tooltip 
+                  cursor={{ fill: '#f1f5f9' }}
+                  contentStyle={{ 
+                    backgroundColor: '#fff', 
+                    border: '4px solid #000', 
+                    borderRadius: '0', 
+                    fontWeight: '900',
+                    textTransform: 'uppercase'
+                  }} 
+                />
+                <Bar dataKey="active" fill="#000" radius={[4, 4, 0, 0]}>
+                  {analytics.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={index % 2 === 0 ? '#000' : '#ff6321'} />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
           </div>
         </NeoCard>
 
@@ -256,18 +399,14 @@ const DashboardView = () => (
                 </tr>
               </thead>
               <tbody className="text-sm font-bold">
-                {[
-                  { name: 'Invoice Processing', status: 'Success', dur: '1.2s', time: 'Oct 24, 14:02:11', color: 'bg-neo-green' },
-                  { name: 'Backup Cloud Storage', status: 'Success', dur: '45.8s', time: 'Oct 24, 13:55:00', color: 'bg-neo-green' },
-                  { name: 'Websocket Handshake', status: 'Failed', dur: '0.4s', time: 'Oct 24, 13:48:22', color: 'bg-neo-pink' },
-                ].map((row, i) => (
-                  <tr key={i} className="border-b-2 border-black hover:bg-slate-50">
+                {logs.map((row) => (
+                  <tr key={row.id} className="border-b-2 border-black hover:bg-slate-50">
                     <td className="px-4 py-3 border-r-2 border-black uppercase">{row.name}</td>
                     <td className="px-4 py-3 border-r-2 border-black">
                       <span className={`${row.color} neo-border px-2 py-0.5 text-[10px] font-black uppercase`}>{row.status}</span>
                     </td>
-                    <td className="px-4 py-3 border-r-2 border-black">{row.dur}</td>
-                    <td className="px-4 py-3">{row.time}</td>
+                    <td className="px-4 py-3 border-r-2 border-black">{row.duration}</td>
+                    <td className="px-4 py-3">{row.timestamp}</td>
                   </tr>
                 ))}
               </tbody>
@@ -279,21 +418,24 @@ const DashboardView = () => (
       <div className="space-y-6">
         <NeoCard title="Live Rules">
           <div className="space-y-4 mt-4">
-            {[
-              { label: 'Data Sync', desc: 'Syncing CRM with Marketing Cloud', status: 'bg-neo-green' },
-              { label: 'Lead Scoring', desc: 'Processing incoming leads', status: 'bg-neo-yellow' },
-              { label: 'Error Alert', desc: 'Notifying Slack on timeouts', status: 'bg-neo-pink' },
-            ].map((rule, i) => (
-              <div key={i} className={`neo-border p-4 ${rule.status}/10 border-black hover:shadow-neo transition-all cursor-pointer`}>
+            {rules.slice(0, 3).map((rule) => (
+              <div 
+                key={rule.id} 
+                onClick={() => onToggleRule(rule.id)}
+                className={`neo-border p-4 ${rule.active ? rule.status + '/20' : 'bg-slate-100 opacity-60'} border-black hover:shadow-neo transition-all cursor-pointer relative`}
+              >
                 <div className="flex justify-between items-start mb-2">
-                  <span className="font-black uppercase text-sm">{rule.label}</span>
-                  <div className={`w-3 h-3 neo-border ${rule.status}`}></div>
+                  <span className="font-black uppercase text-sm">{rule.name}</span>
+                  <div className={`w-3 h-3 neo-border ${rule.active ? rule.status : 'bg-slate-400'}`}></div>
                 </div>
-                <p className="text-xs font-bold text-slate-600">{rule.desc}</p>
+                <p className="text-xs font-bold text-slate-600">{rule.description}</p>
+                <div className="absolute top-2 right-8">
+                  {rule.active ? <Check size={14} className="text-green-600" /> : <X size={14} className="text-red-600" />}
+                </div>
               </div>
             ))}
           </div>
-          <NeoButton variant="secondary" className="w-full mt-4 py-3 text-xs">View All 24 Rules</NeoButton>
+          <NeoButton variant="secondary" className="w-full mt-4 py-3 text-xs" onClick={onViewAllRules}>View All {rules.length} Rules</NeoButton>
         </NeoCard>
 
         <NeoCard className="bg-black text-white">
@@ -315,21 +457,19 @@ const DashboardView = () => (
   </div>
 );
 
-const RolesView = () => {
-  const permissions = [
-    { module: 'User Management', read: true, write: true, delete: false },
-    { module: 'Analytics Dashboard', read: true, write: false, delete: false },
-    { module: 'System Settings', read: true, write: true, delete: true },
-    { module: 'Automation Rules', read: true, write: true, delete: false },
-    { module: 'Billing & Invoices', read: true, write: false, delete: false },
-    { module: 'API Access', read: false, write: false, delete: false },
-  ];
-
+const RolesView = ({ permissions, auditLogs, securityPolicies, onTogglePermission, onTogglePolicy, onSave }: {
+  permissions: Permission[],
+  auditLogs: any[],
+  securityPolicies: any,
+  onTogglePermission: (index: number, field: 'read' | 'write' | 'delete') => void,
+  onTogglePolicy: (key: string) => void,
+  onSave: () => void
+}) => {
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h2 className="text-4xl font-black uppercase tracking-tighter">Roles & <span className="text-neo-pink">Permissions</span></h2>
-        <NeoButton variant="pink">Save Changes</NeoButton>
+        <NeoButton variant="pink" onClick={onSave}>Save Changes</NeoButton>
       </div>
 
       <NeoCard title="Admin Role Configuration">
@@ -348,13 +488,28 @@ const RolesView = () => {
                 <tr key={i} className="hover:bg-neo-pink/5 transition-colors">
                   <td className="p-4 border-r-2 border-black font-black uppercase text-xs">{p.module}</td>
                   <td className="p-4 border-r-2 border-black text-center">
-                    <input type="checkbox" defaultChecked={p.read} className="w-6 h-6 neo-border accent-neo-pink cursor-pointer" />
+                    <input 
+                      type="checkbox" 
+                      checked={p.read} 
+                      onChange={() => onTogglePermission(i, 'read')}
+                      className="w-6 h-6 neo-border accent-neo-pink cursor-pointer" 
+                    />
                   </td>
                   <td className="p-4 border-r-2 border-black text-center">
-                    <input type="checkbox" defaultChecked={p.write} className="w-6 h-6 neo-border accent-neo-pink cursor-pointer" />
+                    <input 
+                      type="checkbox" 
+                      checked={p.write} 
+                      onChange={() => onTogglePermission(i, 'write')}
+                      className="w-6 h-6 neo-border accent-neo-pink cursor-pointer" 
+                    />
                   </td>
                   <td className="p-4 text-center">
-                    <input type="checkbox" defaultChecked={p.delete} className="w-6 h-6 neo-border accent-neo-pink cursor-pointer" />
+                    <input 
+                      type="checkbox" 
+                      checked={p.delete} 
+                      onChange={() => onTogglePermission(i, 'delete')}
+                      className="w-6 h-6 neo-border accent-neo-pink cursor-pointer" 
+                    />
                   </td>
                 </tr>
               ))}
@@ -367,26 +522,37 @@ const RolesView = () => {
         <NeoCard title="Security Policy">
           <div className="space-y-4 mt-2">
             <div className="flex items-center gap-3">
-              <input type="checkbox" defaultChecked className="w-5 h-5 neo-border accent-black" />
+              <input 
+                type="checkbox" 
+                checked={securityPolicies.require2FA} 
+                onChange={() => onTogglePolicy('require2FA')}
+                className="w-5 h-5 neo-border accent-black" 
+              />
               <label className="text-xs font-black uppercase">Require 2FA for all admins</label>
             </div>
             <div className="flex items-center gap-3">
-              <input type="checkbox" className="w-5 h-5 neo-border accent-black" />
+              <input 
+                type="checkbox" 
+                checked={securityPolicies.autoLock} 
+                onChange={() => onTogglePolicy('autoLock')}
+                className="w-5 h-5 neo-border accent-black" 
+              />
               <label className="text-xs font-black uppercase">Auto-lock after 15 mins inactivity</label>
             </div>
             <div className="flex items-center gap-3">
-              <input type="checkbox" defaultChecked className="w-5 h-5 neo-border accent-black" />
+              <input 
+                type="checkbox" 
+                checked={securityPolicies.restrictIP} 
+                onChange={() => onTogglePolicy('restrictIP')}
+                className="w-5 h-5 neo-border accent-black" 
+              />
               <label className="text-xs font-black uppercase">Restrict login by IP range</label>
             </div>
           </div>
         </NeoCard>
         <NeoCard title="Audit Log">
           <div className="space-y-3 mt-2">
-            {[
-              { user: 'Alex R.', action: 'Updated Role: Editor', time: '10m ago' },
-              { user: 'System', action: 'Auto-backup completed', time: '1h ago' },
-              { user: 'Morgan L.', action: 'Deleted User: Taylor W.', time: '3h ago' },
-            ].map((log, i) => (
+            {auditLogs.map((log, i) => (
               <div key={i} className="flex justify-between items-center text-[10px] font-bold uppercase border-b border-black/10 pb-2">
                 <span><span className="font-black">{log.user}</span> {log.action}</span>
                 <span className="text-slate-400">{log.time}</span>
@@ -399,18 +565,360 @@ const RolesView = () => {
   );
 };
 
+const TeamsView = () => {
+  const teams = [
+    { name: 'Engineering', members: 12, lead: 'Alex Rivera', color: 'bg-primary' },
+    { name: 'Design', members: 5, lead: 'Jordan Smith', color: 'bg-neo-pink' },
+    { name: 'Marketing', members: 8, lead: 'Riley Quinn', color: 'bg-neo-yellow' },
+    { name: 'Support', members: 15, lead: 'Jamie Lane', color: 'bg-neo-green' },
+  ];
+
+  return (
+    <div className="space-y-6">
+      <div className="flex justify-between items-center">
+        <h2 className="text-4xl font-black uppercase tracking-tighter">Team <span className="text-primary">Structures</span></h2>
+        <NeoButton variant="primary">+ Create Team</NeoButton>
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {teams.map((team, i) => (
+          <NeoCard key={i} title={team.name}>
+            <div className="flex justify-between items-center mt-2">
+              <div className="space-y-1">
+                <p className="text-xs font-bold text-slate-500 uppercase">Team Lead</p>
+                <p className="font-black uppercase">{team.lead}</p>
+              </div>
+              <div className="text-right">
+                <p className="text-xs font-bold text-slate-500 uppercase">Members</p>
+                <p className="text-2xl font-black">{team.members}</p>
+              </div>
+            </div>
+            <div className={`h-2 w-full mt-4 neo-border ${team.color}`}></div>
+            <div className="flex gap-2 mt-4">
+              <NeoButton variant="secondary" className="flex-1 text-[10px]">Manage</NeoButton>
+              <NeoButton variant="secondary" className="flex-1 text-[10px]">Settings</NeoButton>
+            </div>
+          </NeoCard>
+        ))}
+      </div>
+    </div>
+  );
+};
+
+const SettingsView = ({ settings, onUpdate }: { settings: any, onUpdate: (key: string, val: any) => void }) => (
+  <div className="space-y-6">
+    <h2 className="text-4xl font-black uppercase tracking-tighter">System <span className="text-neo-yellow">Settings</span></h2>
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+      <NeoCard title="General Configuration">
+        <div className="space-y-4 mt-4">
+          <div className="space-y-1">
+            <label className="text-xs font-black uppercase">Organization Name</label>
+            <input 
+              className="w-full neo-border p-2 font-bold uppercase text-sm" 
+              value={settings.orgName} 
+              onChange={(e) => onUpdate('orgName', e.target.value)}
+            />
+          </div>
+          <div className="space-y-1">
+            <label className="text-xs font-black uppercase">Admin Email</label>
+            <input 
+              className="w-full neo-border p-2 font-bold text-sm" 
+              value={settings.adminEmail} 
+              onChange={(e) => onUpdate('adminEmail', e.target.value)}
+            />
+          </div>
+          <div className="flex items-center gap-3 pt-2">
+            <input 
+              type="checkbox" 
+              checked={settings.darkMode} 
+              onChange={(e) => onUpdate('darkMode', e.target.checked)}
+              className="w-5 h-5 neo-border accent-black" 
+            />
+            <label className="text-xs font-black uppercase">Enable Dark Mode (Beta)</label>
+          </div>
+        </div>
+      </NeoCard>
+      <NeoCard title="API Access Tokens">
+        <div className="space-y-4 mt-4">
+          <div className="p-3 neo-border bg-slate-50 flex justify-between items-center">
+            <div>
+              <p className="text-[10px] font-black uppercase text-slate-400">Production Key</p>
+              <p className="font-mono text-xs">bs_live_••••••••••••••••</p>
+            </div>
+            <NeoButton variant="secondary" className="text-[10px]" onClick={() => alert('Token Revoked')}>Revoke</NeoButton>
+          </div>
+          <div className="p-3 neo-border bg-slate-50 flex justify-between items-center">
+            <div>
+              <p className="text-[10px] font-black uppercase text-slate-400">Staging Key</p>
+              <p className="font-mono text-xs">bs_test_••••••••••••••••</p>
+            </div>
+            <NeoButton variant="secondary" className="text-[10px]" onClick={() => alert('Token Revoked')}>Revoke</NeoButton>
+          </div>
+          <NeoButton variant="primary" className="w-full py-2 text-xs" onClick={() => alert('Generating Token...')}>+ Generate New Token</NeoButton>
+        </div>
+      </NeoCard>
+    </div>
+  </div>
+);
+
+const ProfileView = ({ user, onUpdate }: { user: User, onUpdate: (u: Partial<User>) => void }) => {
+  const [name, setName] = useState(user.name);
+  const [email, setEmail] = useState(user.email);
+
+  return (
+    <div className="space-y-8">
+      <div className="flex items-center gap-6">
+        <div className="w-32 h-32 neo-border-thick overflow-hidden bg-slate-200">
+          <img src={user.avatar} alt={user.name} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+        </div>
+        <div>
+          <h2 className="text-4xl font-black uppercase tracking-tighter">{user.name}</h2>
+          <p className="text-xl font-bold text-primary uppercase">{user.role}</p>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+        <NeoCard title="Personal Information">
+          <div className="space-y-4 mt-4">
+            <div className="space-y-1">
+              <label className="text-xs font-black uppercase">Full Name</label>
+              <input 
+                className="w-full neo-border p-2 font-bold uppercase text-sm" 
+                value={name} 
+                onChange={(e) => setName(e.target.value)}
+              />
+            </div>
+            <div className="space-y-1">
+              <label className="text-xs font-black uppercase">Email Address</label>
+              <input 
+                className="w-full neo-border p-2 font-bold text-sm" 
+                value={email} 
+                onChange={(e) => setEmail(e.target.value)}
+              />
+            </div>
+            <NeoButton variant="primary" className="w-full mt-2" onClick={() => onUpdate({ name, email })}>Update Profile</NeoButton>
+          </div>
+        </NeoCard>
+
+        <NeoCard title="Account Security">
+          <div className="space-y-4 mt-4">
+            <div className="flex justify-between items-center p-3 neo-border bg-slate-50">
+              <div>
+                <p className="text-xs font-black uppercase">Two-Factor Auth</p>
+                <p className="text-[10px] font-bold text-slate-500 uppercase">Enabled via Authenticator App</p>
+              </div>
+              <NeoButton variant="secondary" className="text-[10px]">Manage</NeoButton>
+            </div>
+            <div className="flex justify-between items-center p-3 neo-border bg-slate-50">
+              <div>
+                <p className="text-xs font-black uppercase">Password</p>
+                <p className="text-[10px] font-bold text-slate-500 uppercase">Last changed 3 months ago</p>
+              </div>
+              <NeoButton variant="secondary" className="text-[10px]">Change</NeoButton>
+            </div>
+          </div>
+        </NeoCard>
+      </div>
+    </div>
+  );
+};
+
+const NotificationDropdown = ({ notifications, onMarkRead, onClose }: { 
+  notifications: Notification[], 
+  onMarkRead: (id: string) => void,
+  onClose: () => void
+}) => (
+  <div className="absolute top-16 right-0 w-80 bg-white neo-border-thick neo-shadow z-[100] p-4">
+    <div className="flex justify-between items-center mb-4 border-b-2 border-black pb-2">
+      <h3 className="font-black uppercase text-sm">Notifications</h3>
+      <button onClick={onClose}><X size={16} /></button>
+    </div>
+    <div className="space-y-3 max-h-[400px] overflow-y-auto pr-2">
+      {notifications.length > 0 ? notifications.map((n) => (
+        <div 
+          key={n.id} 
+          onClick={() => onMarkRead(n.id)}
+          className={`p-3 neo-border cursor-pointer transition-all hover:bg-slate-50 ${n.read ? 'opacity-60' : 'bg-primary/5 border-primary'}`}
+        >
+          <div className="flex items-center gap-2 mb-1">
+            {n.type === 'success' && <CheckCircle2 size={14} className="text-green-600" />}
+            {n.type === 'warning' && <AlertTriangle size={14} className="text-yellow-600" />}
+            {n.type === 'error' && <XCircle size={14} className="text-red-600" />}
+            {n.type === 'info' && <Info size={14} className="text-blue-600" />}
+            <span className="font-black uppercase text-[10px]">{n.title}</span>
+          </div>
+          <p className="text-[10px] font-bold leading-tight mb-1">{n.message}</p>
+          <p className="text-[8px] font-black text-slate-400 uppercase">{n.time}</p>
+        </div>
+      )) : (
+        <p className="text-center py-8 text-xs font-black uppercase text-slate-400">No new notifications</p>
+      )}
+    </div>
+  </div>
+);
+
 // --- Main App ---
 
 export default function App() {
-  const [activeView, setActiveView] = useState('users');
+  const [activeView, setActiveView] = useState('dashboard');
+  const [users, setUsers] = useState<User[]>(MOCK_USERS);
+  const [rules, setRules] = useState<AutomationRule[]>(MOCK_RULES);
+  const [permissions, setPermissions] = useState<Permission[]>(MOCK_PERMISSIONS);
+  const [logs] = useState<ExecutionLog[]>(MOCK_LOGS);
+  const [notifications, setNotifications] = useState<Notification[]>(MOCK_NOTIFICATIONS);
+  const [analytics] = useState<AnalyticsData[]>(MOCK_ANALYTICS);
+  const [globalSearch, setGlobalSearch] = useState('');
+  const [showNotifications, setShowNotifications] = useState(false);
+  const [securityPolicies, setSecurityPolicies] = useState({
+    require2FA: true,
+    autoLock: false,
+    restrictIP: true
+  });
+  const [settings, setSettings] = useState({
+    orgName: 'BrutalSuite Enterprise',
+    adminEmail: 'admin@brutalsuite.io',
+    darkMode: false
+  });
+  const [auditLogs, setAuditLogs] = useState([
+    { user: 'Alex R.', action: 'Updated Role: Editor', time: '10m ago' },
+    { user: 'System', action: 'Auto-backup completed', time: '1h ago' },
+    { user: 'Morgan L.', action: 'Deleted User: Taylor W.', time: '3h ago' },
+  ]);
+
+  const currentUser = users[0]; // Alex Rivera
+
+  const filteredUsers = useMemo(() => {
+    if (!globalSearch) return users;
+    const s = globalSearch.toLowerCase();
+    return users.filter(u => 
+      u.name.toLowerCase().includes(s) || 
+      u.email.toLowerCase().includes(s) ||
+      u.role.toLowerCase().includes(s)
+    );
+  }, [users, globalSearch]);
+
+  const handleUpdateProfile = (updates: Partial<User>) => {
+    setUsers(users.map(u => u.id === currentUser.id ? { ...u, ...updates } : u));
+    alert('Profile updated successfully!');
+    setActiveView('dashboard');
+  };
+
+  const handleTogglePolicy = (key: string) => {
+    setSecurityPolicies(prev => ({ ...prev, [key]: !prev[key as keyof typeof prev] }));
+  };
+
+  const handleUpdateSettings = (key: string, val: any) => {
+    setSettings(prev => ({ ...prev, [key]: val }));
+  };
+
+  const handleMarkNotificationRead = (id: string) => {
+    setNotifications(notifications.map(n => n.id === id ? { ...n, read: true } : n));
+  };
+
+  const handleAddUser = () => {
+    const name = prompt('Enter user name:');
+    if (!name) return;
+    const email = prompt('Enter email:');
+    if (!email) return;
+    
+    const newUser: User = {
+      id: Math.random().toString(36).substr(2, 9),
+      name,
+      email,
+      role: 'Viewer',
+      status: 'Pending',
+      lastActive: 'Never',
+      avatar: `https://picsum.photos/seed/${name}/100`
+    };
+    setUsers([newUser, ...users]);
+  };
+
+  const handleEditUser = (user: User) => {
+    const newName = prompt('Edit name:', user.name);
+    if (!newName) return;
+    setUsers(users.map(u => u.id === user.id ? { ...u, name: newName } : u));
+  };
+
+  const handleDeleteUser = (id: string) => {
+    if (confirm('Are you sure you want to delete this user?')) {
+      setUsers(users.filter(u => u.id !== id));
+    }
+  };
+
+  const handleToggleRule = (id: string) => {
+    setRules(rules.map(r => r.id === id ? { ...r, active: !r.active } : r));
+  };
+
+  const handleTogglePermission = (index: number, field: 'read' | 'write' | 'delete') => {
+    const newPermissions = [...permissions];
+    newPermissions[index] = {
+      ...newPermissions[index],
+      [field]: !newPermissions[index][field]
+    };
+    setPermissions(newPermissions);
+  };
+
+  const handleSavePermissions = () => {
+    alert('Permissions saved successfully!');
+  };
+
+  const handleAddRule = () => {
+    const name = prompt('Rule Name:');
+    if (!name) return;
+    const description = prompt('Description:');
+    if (!description) return;
+    
+    const newRule: AutomationRule = {
+      id: Math.random().toString(36).substr(2, 9),
+      name,
+      description,
+      status: 'bg-neo-green',
+      active: true
+    };
+    setRules([newRule, ...rules]);
+  };
 
   const renderView = () => {
     switch (activeView) {
-      case 'dashboard': return <DashboardView />;
-      case 'users': return <UserDirectory />;
-      case 'analytics': return <AnalyticsView />;
-      case 'roles': return <RolesView />;
-      default: return <UserDirectory />;
+      case 'dashboard': return (
+        <DashboardView 
+          rules={rules} 
+          logs={logs} 
+          analytics={analytics}
+          onToggleRule={handleToggleRule} 
+          onViewAllRules={() => alert(`Total Rules: ${rules.length}`)} 
+          onCreateRule={handleAddRule}
+        />
+      );
+      case 'users': return (
+        <UserDirectory 
+          users={filteredUsers} 
+          onAdd={handleAddUser} 
+          onEdit={handleEditUser} 
+          onDelete={handleDeleteUser} 
+        />
+      );
+      case 'analytics': return <AnalyticsView data={analytics} />;
+      case 'teams': return <TeamsView />;
+      case 'settings': return <SettingsView settings={settings} onUpdate={handleUpdateSettings} />;
+      case 'profile': return <ProfileView user={currentUser} onUpdate={handleUpdateProfile} />;
+      case 'roles': return (
+        <RolesView 
+          permissions={permissions} 
+          auditLogs={auditLogs}
+          securityPolicies={securityPolicies}
+          onTogglePermission={handleTogglePermission} 
+          onTogglePolicy={handleTogglePolicy}
+          onSave={handleSavePermissions} 
+        />
+      );
+      default: return (
+        <UserDirectory 
+          users={filteredUsers} 
+          onAdd={handleAddUser} 
+          onEdit={handleEditUser} 
+          onDelete={handleDeleteUser} 
+        />
+      );
     }
   };
 
@@ -428,8 +936,8 @@ export default function App() {
           <nav className="hidden md:flex items-center gap-6">
             <button onClick={() => setActiveView('users')} className={`text-sm font-black uppercase hover:underline decoration-primary decoration-2 underline-offset-4 ${activeView === 'users' ? 'underline' : ''}`}>Directory</button>
             <button onClick={() => setActiveView('roles')} className={`text-sm font-black uppercase hover:underline decoration-primary decoration-2 underline-offset-4 ${activeView === 'roles' ? 'underline' : ''}`}>Roles</button>
-            <button className="text-sm font-black uppercase hover:underline decoration-primary decoration-2 underline-offset-4">Teams</button>
-            <button className="text-sm font-black uppercase hover:underline decoration-primary decoration-2 underline-offset-4">Settings</button>
+            <button onClick={() => setActiveView('teams')} className={`text-sm font-black uppercase hover:underline decoration-primary decoration-2 underline-offset-4 ${activeView === 'teams' ? 'underline' : ''}`}>Teams</button>
+            <button onClick={() => setActiveView('settings')} className={`text-sm font-black uppercase hover:underline decoration-primary decoration-2 underline-offset-4 ${activeView === 'settings' ? 'underline' : ''}`}>Settings</button>
           </nav>
         </div>
         <div className="flex flex-1 justify-end gap-4 items-center">
@@ -441,11 +949,46 @@ export default function App() {
               className="neo-border bg-white w-full py-2 pl-10 pr-4 text-sm font-bold focus:ring-0 focus:outline-none uppercase" 
               placeholder="Search..." 
               type="text"
+              value={globalSearch}
+              onChange={(e) => setGlobalSearch(e.target.value)}
             />
           </div>
-          <div className="flex gap-2">
-            <NeoButton variant="secondary" className="p-2"><Bell size={20} /></NeoButton>
-            <NeoButton variant="secondary" className="p-2"><User size={20} /></NeoButton>
+          <div className="flex gap-2 relative">
+            <NeoButton 
+              variant="secondary" 
+              className={`p-2 relative ${showNotifications ? 'bg-primary/20' : ''}`}
+              onClick={() => setShowNotifications(!showNotifications)}
+            >
+              <Bell size={20} />
+              {notifications.filter(n => !n.read).length > 0 && (
+                <span className="absolute -top-1 -right-1 w-4 h-4 bg-neo-pink neo-border text-[8px] flex items-center justify-center font-black text-white">
+                  {notifications.filter(n => !n.read).length}
+                </span>
+              )}
+            </NeoButton>
+            <NeoButton 
+              variant="secondary" 
+              className={`p-2 ${activeView === 'profile' ? 'bg-primary/20' : ''}`}
+              onClick={() => setActiveView('profile')}
+            >
+              <UserIcon size={20} />
+            </NeoButton>
+
+            <AnimatePresence>
+              {showNotifications && (
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.95, y: 10 }}
+                  animate={{ opacity: 1, scale: 1, y: 0 }}
+                  exit={{ opacity: 0, scale: 0.95, y: 10 }}
+                >
+                  <NotificationDropdown 
+                    notifications={notifications} 
+                    onMarkRead={handleMarkNotificationRead}
+                    onClose={() => setShowNotifications(false)}
+                  />
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
         </div>
       </header>
@@ -459,7 +1002,7 @@ export default function App() {
                 <Zap className="text-primary" size={24} />
               </div>
               <div>
-                <h1 className="font-black text-sm uppercase">CorpAdmin</h1>
+                <h1 className="font-black text-sm uppercase">{settings.orgName}</h1>
                 <p className="text-xs font-bold text-primary">Enterprise</p>
               </div>
             </div>
