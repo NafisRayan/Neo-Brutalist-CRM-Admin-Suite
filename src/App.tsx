@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, FormEvent } from 'react';
 import { 
   Users, 
   LayoutDashboard, 
@@ -29,7 +29,9 @@ import {
   Building2,
   Lock,
   Eye,
-  EyeOff
+  EyeOff,
+  Sun,
+  Moon
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
@@ -58,20 +60,22 @@ import {
 
 // --- Components ---
 
-const NeoButton = ({ children, variant = 'primary', className = '', onClick }: any) => {
+const NeoButton = ({ children, variant = 'primary', className = '', onClick, type = 'button', disabled }: any) => {
   const variants: any = {
     primary: 'bg-primary text-white',
-    secondary: 'bg-white text-black',
+    secondary: 'bg-white text-black dark:bg-slate-700 dark:text-white',
     yellow: 'bg-neo-yellow text-black',
     green: 'bg-neo-green text-black',
     pink: 'bg-neo-pink text-black',
-    black: 'bg-black text-white',
+    black: 'bg-black text-white dark:bg-slate-900',
   };
 
   return (
     <button 
+      type={type}
       onClick={onClick}
-      className={`neo-border neo-shadow-sm font-black uppercase tracking-widest px-4 py-2 neo-transition ${variants[variant]} ${className}`}
+      disabled={disabled}
+      className={`neo-border neo-shadow-sm font-black uppercase tracking-widest px-4 py-2 neo-transition ${variants[variant]} ${className} disabled:opacity-50 disabled:cursor-not-allowed`}
     >
       {children}
     </button>
@@ -79,7 +83,7 @@ const NeoButton = ({ children, variant = 'primary', className = '', onClick }: a
 };
 
 const NeoCard = ({ children, className = '', title }: any) => (
-  <div className={`bg-white neo-border-thick neo-shadow p-6 ${className}`}>
+  <div className={`bg-white dark:bg-slate-800 dark:text-white neo-border-thick neo-shadow p-6 ${className}`}>
     {title && <h3 className="text-xl font-black uppercase mb-4 tracking-tight">{title}</h3>}
     {children}
   </div>
@@ -89,13 +93,113 @@ const SidebarItem = ({ icon: Icon, label, active, onClick }: any) => (
   <button 
     onClick={onClick}
     className={`w-full flex items-center gap-3 p-3 neo-border font-black uppercase text-sm transition-colors ${
-      active ? 'bg-primary text-white neo-shadow-sm' : 'bg-white hover:bg-primary/10'
+      active 
+        ? 'bg-primary text-white neo-shadow-sm' 
+        : 'bg-white dark:bg-slate-800 dark:text-white hover:bg-primary/10 dark:hover:bg-primary/20'
     }`}
   >
     <Icon size={18} />
     <span className="hidden lg:inline">{label}</span>
   </button>
 );
+
+const Modal = ({ title, onClose, children }: any) => (
+  <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+    <motion.div 
+      initial={{ scale: 0.9, opacity: 0 }}
+      animate={{ scale: 1, opacity: 1 }}
+      className="bg-white dark:bg-slate-800 dark:text-white neo-border-thick neo-shadow-lg w-full max-w-md p-8 relative"
+    >
+      <button onClick={onClose} className="absolute top-4 right-4 hover:rotate-90 transition-transform dark:text-white">
+        <X size={24} />
+      </button>
+      <h3 className="text-3xl font-black uppercase tracking-tighter mb-6">{title}</h3>
+      {children}
+    </motion.div>
+  </div>
+);
+
+const LoginScreen = ({ onLogin, darkMode, onToggleTheme }: { onLogin: (e: FormEvent) => void, darkMode: boolean, onToggleTheme: () => void }) => {
+  const [email, setEmail] = useState('admin@brutalsuite.io');
+  const [password, setPassword] = useState('password');
+  const [showPassword, setShowPassword] = useState(false);
+
+  return (
+    <div className="min-h-screen bg-primary/5 dark:bg-slate-900 flex items-center justify-center p-4 relative">
+      <div className="absolute top-4 right-4">
+        <NeoButton 
+          variant="secondary" 
+          className="p-2"
+          onClick={onToggleTheme}
+          title={darkMode ? "Switch to Light Mode" : "Switch to Dark Mode"}
+        >
+          {darkMode ? <Sun size={20} className="text-neo-yellow" /> : <Moon size={20} />}
+        </NeoButton>
+      </div>
+      <motion.div 
+        initial={{ y: 20, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        className="w-full max-w-md bg-white dark:bg-slate-800 dark:text-white neo-border-thick neo-shadow-lg p-10"
+      >
+        <div className="flex items-center gap-3 mb-10 justify-center">
+          <div className="bg-primary neo-border p-3 flex items-center justify-center">
+            <ShieldCheck className="text-white" size={32} />
+          </div>
+          <h1 className="text-4xl font-black uppercase tracking-tighter">BrutalSuite</h1>
+        </div>
+
+        <form onSubmit={onLogin} className="space-y-6">
+          <div className="space-y-2">
+            <label className="text-xs font-black uppercase tracking-widest flex items-center gap-2">
+              <Mail size={14} /> Email Address
+            </label>
+            <input 
+              type="email" 
+              required
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="w-full neo-border p-4 font-bold text-sm focus:bg-primary/5 dark:focus:bg-primary/10 outline-none transition-colors dark:bg-slate-700" 
+              placeholder="admin@brutalsuite.io"
+            />
+          </div>
+          <div className="space-y-2">
+            <label className="text-xs font-black uppercase tracking-widest flex items-center gap-2">
+              <Lock size={14} /> Password
+            </label>
+            <div className="relative">
+              <input 
+                type={showPassword ? 'text' : 'password'} 
+                required
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="w-full neo-border p-4 font-bold text-sm focus:bg-primary/5 dark:focus:bg-primary/10 outline-none transition-colors dark:bg-slate-700" 
+                placeholder="••••••••"
+              />
+              <button 
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-black dark:hover:text-white"
+              >
+                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+              </button>
+            </div>
+          </div>
+          <div className="flex items-center gap-3 pt-2">
+            <input type="checkbox" id="remember" className="w-5 h-5 neo-border accent-primary" />
+            <label htmlFor="remember" className="text-[10px] font-black uppercase cursor-pointer">Remember this device</label>
+          </div>
+          <NeoButton type="submit" variant="primary" className="w-full py-5 text-lg">Initialize Session</NeoButton>
+        </form>
+
+        <div className="mt-8 pt-8 border-t-2 border-black/5 dark:border-white/5 text-center">
+          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+            Protected by BrutalShield™ Enterprise Security
+          </p>
+        </div>
+      </motion.div>
+    </div>
+  );
+};
 
 // --- Views ---
 
@@ -127,20 +231,20 @@ const UserDirectory = ({ users, onAdd, onEdit, onDelete }: {
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="bg-primary/5 border-b-4 border-black">
-                <th className="p-4 font-black uppercase text-sm border-r-2 border-black">Name</th>
-                <th className="p-4 font-black uppercase text-sm border-r-2 border-black">Role</th>
-                <th className="p-4 font-black uppercase text-sm border-r-2 border-black">Status</th>
-                <th className="p-4 font-black uppercase text-sm border-r-2 border-black">Last Active</th>
+              <tr className="bg-primary/5 dark:bg-primary/10 border-b-4 border-black dark:border-white">
+                <th className="p-4 font-black uppercase text-sm border-r-2 border-black dark:border-white">Name</th>
+                <th className="p-4 font-black uppercase text-sm border-r-2 border-black dark:border-white">Role</th>
+                <th className="p-4 font-black uppercase text-sm border-r-2 border-black dark:border-white">Status</th>
+                <th className="p-4 font-black uppercase text-sm border-r-2 border-black dark:border-white">Last Active</th>
                 <th className="p-4 font-black uppercase text-sm text-center">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y-2 divide-black">
+            <tbody className="divide-y-2 divide-black dark:divide-white">
               {paginatedUsers.length > 0 ? paginatedUsers.map((user) => (
-                <tr key={user.id} className="hover:bg-slate-50 transition-colors">
-                  <td className="p-4 border-r-2 border-black">
+                <tr key={user.id} className="hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors">
+                  <td className="p-4 border-r-2 border-black dark:border-white">
                     <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 neo-border bg-slate-200 overflow-hidden">
+                      <div className="w-10 h-10 neo-border bg-slate-200 dark:bg-slate-700 overflow-hidden">
                         <img src={user.avatar} alt={user.name} referrerPolicy="no-referrer" />
                       </div>
                       <div className="flex flex-col">
@@ -149,39 +253,42 @@ const UserDirectory = ({ users, onAdd, onEdit, onDelete }: {
                       </div>
                     </div>
                   </td>
-                  <td className="p-4 border-r-2 border-black">
-                    <span className={`neo-border px-3 py-1 font-black text-[10px] uppercase ${user.role === 'Admin' ? 'bg-primary/20 text-primary' : 'bg-slate-200'}`}>
+                  <td className="p-4 border-r-2 border-black dark:border-white">
+                    <span className={`neo-border px-3 py-1 font-black text-[10px] uppercase ${user.role === 'Admin' ? 'bg-primary/20 text-primary' : 'bg-slate-200 dark:bg-slate-700'}`}>
                       {user.role}
                     </span>
                   </td>
-                  <td className="p-4 border-r-2 border-black">
+                  <td className="p-4 border-r-2 border-black dark:border-white">
                     <span className="flex items-center gap-2 font-bold text-xs uppercase">
                       <span className={`w-3 h-3 neo-border ${user.status === 'Active' ? 'bg-green-500' : user.status === 'Inactive' ? 'bg-red-500' : 'bg-yellow-400'}`}></span>
                       {user.status}
                     </span>
                   </td>
-                  <td className="p-4 border-r-2 border-black font-bold text-xs uppercase text-slate-500">{user.lastActive}</td>
+                  <td className="p-4 border-r-2 border-black dark:border-white font-bold text-xs uppercase text-slate-500 dark:text-slate-400">{user.lastActive}</td>
                   <td className="p-4 text-center">
                     <div className="flex justify-center gap-2">
-                      <button 
+                      <NeoButton 
                         onClick={() => alert(`Viewing profile for ${user.name}`)}
-                        className="neo-border p-2 hover:bg-primary hover:text-white transition-all"
+                        variant="secondary"
+                        className="p-2 hover:bg-primary hover:text-white transition-all"
                         title="View Profile"
                       >
                         <Eye size={14} />
-                      </button>
-                      <button 
+                      </NeoButton>
+                      <NeoButton 
                         onClick={() => onEdit(user)}
-                        className="neo-border p-2 hover:bg-neo-yellow transition-all"
+                        variant="secondary"
+                        className="p-2 hover:bg-neo-yellow transition-all"
                       >
                         <Edit2 size={14} />
-                      </button>
-                      <button 
+                      </NeoButton>
+                      <NeoButton 
                         onClick={() => onDelete(user.id)}
-                        className="neo-border p-2 hover:bg-neo-pink hover:text-white transition-all"
+                        variant="secondary"
+                        className="p-2 hover:bg-neo-pink hover:text-white transition-all"
                       >
                         <Trash2 size={14} />
-                      </button>
+                      </NeoButton>
                     </div>
                   </td>
                 </tr>
@@ -231,11 +338,11 @@ const UserDirectory = ({ users, onAdd, onEdit, onDelete }: {
 
 const AnalyticsView = ({ data }: { data: AnalyticsData[] }) => (
   <div className="space-y-8">
-    <div className="bg-primary/10 neo-border-thick p-8 neo-shadow">
-      <h1 className="text-5xl md:text-7xl font-black uppercase leading-none tracking-tighter mb-4">
+    <div className="bg-primary/10 dark:bg-primary/20 neo-border-thick p-8 neo-shadow">
+      <h1 className="text-5xl md:text-7xl font-black uppercase leading-none tracking-tighter mb-4 dark:text-white">
         Global <span className="text-primary italic">Analytics</span> Overview
       </h1>
-      <p className="text-xl font-bold border-l-4 border-black pl-4">
+      <p className="text-xl font-bold border-l-4 border-black dark:border-white pl-4 dark:text-slate-300">
         Real-time performance monitoring and volume trends across all active clusters.
       </p>
     </div>
@@ -343,8 +450,8 @@ const DashboardView = ({ rules, logs, analytics, onToggleRule, onViewAllRules, o
   <div className="space-y-8">
     <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
       <div className="space-y-2">
-        <h1 className="text-5xl font-black uppercase tracking-tighter leading-none">Automation<br/>Overview</h1>
-        <p className="text-lg font-bold bg-neo-green/30 inline-block px-2">SYSTEM STATUS: OPTIMAL // {rules.filter(r => r.active).length} ACTIVE NODES</p>
+        <h1 className="text-5xl font-black uppercase tracking-tighter leading-none dark:text-white">Automation<br/>Overview</h1>
+        <p className="text-lg font-bold bg-neo-green/30 inline-block px-2 dark:text-neo-green">SYSTEM STATUS: OPTIMAL // {rules.filter(r => r.active).length} ACTIVE NODES</p>
       </div>
       <NeoButton variant="primary" className="px-8 py-3" onClick={onCreateRule}>Create New Rule</NeoButton>
     </div>
@@ -391,21 +498,21 @@ const DashboardView = ({ rules, logs, analytics, onToggleRule, onViewAllRules, o
           <div className="overflow-x-auto mt-4">
             <table className="w-full text-left border-collapse">
               <thead>
-                <tr className="border-b-2 border-black text-xs font-black uppercase bg-slate-50">
-                  <th className="px-4 py-3 border-r-2 border-black">Rule Name</th>
-                  <th className="px-4 py-3 border-r-2 border-black">Status</th>
-                  <th className="px-4 py-3 border-r-2 border-black">Duration</th>
+                <tr className="border-b-2 border-black dark:border-white text-xs font-black uppercase bg-slate-50 dark:bg-slate-700">
+                  <th className="px-4 py-3 border-r-2 border-black dark:border-white">Rule Name</th>
+                  <th className="px-4 py-3 border-r-2 border-black dark:border-white">Status</th>
+                  <th className="px-4 py-3 border-r-2 border-black dark:border-white">Duration</th>
                   <th className="px-4 py-3">Timestamp</th>
                 </tr>
               </thead>
               <tbody className="text-sm font-bold">
                 {logs.map((row) => (
-                  <tr key={row.id} className="border-b-2 border-black hover:bg-slate-50">
-                    <td className="px-4 py-3 border-r-2 border-black uppercase">{row.name}</td>
-                    <td className="px-4 py-3 border-r-2 border-black">
+                  <tr key={row.id} className="border-b-2 border-black dark:border-white hover:bg-slate-50 dark:hover:bg-slate-700">
+                    <td className="px-4 py-3 border-r-2 border-black dark:border-white uppercase">{row.name}</td>
+                    <td className="px-4 py-3 border-r-2 border-black dark:border-white">
                       <span className={`${row.color} neo-border px-2 py-0.5 text-[10px] font-black uppercase`}>{row.status}</span>
                     </td>
-                    <td className="px-4 py-3 border-r-2 border-black">{row.duration}</td>
+                    <td className="px-4 py-3 border-r-2 border-black dark:border-white">{row.duration}</td>
                     <td className="px-4 py-3">{row.timestamp}</td>
                   </tr>
                 ))}
@@ -422,13 +529,13 @@ const DashboardView = ({ rules, logs, analytics, onToggleRule, onViewAllRules, o
               <div 
                 key={rule.id} 
                 onClick={() => onToggleRule(rule.id)}
-                className={`neo-border p-4 ${rule.active ? rule.status + '/20' : 'bg-slate-100 opacity-60'} border-black hover:shadow-neo transition-all cursor-pointer relative`}
+                className={`neo-border p-4 ${rule.active ? rule.status + '/20' : 'bg-slate-100 dark:bg-slate-700 opacity-60'} border-black dark:border-white hover:shadow-neo transition-all cursor-pointer relative`}
               >
                 <div className="flex justify-between items-start mb-2">
                   <span className="font-black uppercase text-sm">{rule.name}</span>
                   <div className={`w-3 h-3 neo-border ${rule.active ? rule.status : 'bg-slate-400'}`}></div>
                 </div>
-                <p className="text-xs font-bold text-slate-600">{rule.description}</p>
+                <p className="text-xs font-bold text-slate-600 dark:text-slate-400">{rule.description}</p>
                 <div className="absolute top-2 right-8">
                   {rule.active ? <Check size={14} className="text-green-600" /> : <X size={14} className="text-red-600" />}
                 </div>
@@ -468,7 +575,7 @@ const RolesView = ({ permissions, auditLogs, securityPolicies, onTogglePermissio
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h2 className="text-4xl font-black uppercase tracking-tighter">Roles & <span className="text-neo-pink">Permissions</span></h2>
+        <h2 className="text-4xl font-black uppercase tracking-tighter dark:text-white">Roles & <span className="text-neo-pink">Permissions</span></h2>
         <NeoButton variant="pink" onClick={onSave}>Save Changes</NeoButton>
       </div>
 
@@ -476,18 +583,18 @@ const RolesView = ({ permissions, auditLogs, securityPolicies, onTogglePermissio
         <div className="overflow-x-auto mt-4">
           <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="border-b-4 border-black bg-slate-50">
-                <th className="p-4 font-black uppercase text-sm border-r-2 border-black">Module</th>
-                <th className="p-4 font-black uppercase text-sm border-r-2 border-black text-center">Read</th>
-                <th className="p-4 font-black uppercase text-sm border-r-2 border-black text-center">Write</th>
+              <tr className="border-b-4 border-black dark:border-white bg-slate-50 dark:bg-slate-700">
+                <th className="p-4 font-black uppercase text-sm border-r-2 border-black dark:border-white">Module</th>
+                <th className="p-4 font-black uppercase text-sm border-r-2 border-black dark:border-white text-center">Read</th>
+                <th className="p-4 font-black uppercase text-sm border-r-2 border-black dark:border-white text-center">Write</th>
                 <th className="p-4 font-black uppercase text-sm text-center">Delete</th>
               </tr>
             </thead>
-            <tbody className="divide-y-2 divide-black">
+            <tbody className="divide-y-2 divide-black dark:divide-white">
               {permissions.map((p, i) => (
                 <tr key={i} className="hover:bg-neo-pink/5 transition-colors">
-                  <td className="p-4 border-r-2 border-black font-black uppercase text-xs">{p.module}</td>
-                  <td className="p-4 border-r-2 border-black text-center">
+                  <td className="p-4 border-r-2 border-black dark:border-white font-black uppercase text-xs">{p.module}</td>
+                  <td className="p-4 border-r-2 border-black dark:border-white text-center">
                     <input 
                       type="checkbox" 
                       checked={p.read} 
@@ -495,7 +602,7 @@ const RolesView = ({ permissions, auditLogs, securityPolicies, onTogglePermissio
                       className="w-6 h-6 neo-border accent-neo-pink cursor-pointer" 
                     />
                   </td>
-                  <td className="p-4 border-r-2 border-black text-center">
+                  <td className="p-4 border-r-2 border-black dark:border-white text-center">
                     <input 
                       type="checkbox" 
                       checked={p.write} 
@@ -565,23 +672,21 @@ const RolesView = ({ permissions, auditLogs, securityPolicies, onTogglePermissio
   );
 };
 
-const TeamsView = () => {
-  const teams = [
-    { name: 'Engineering', members: 12, lead: 'Alex Rivera', color: 'bg-primary' },
-    { name: 'Design', members: 5, lead: 'Jordan Smith', color: 'bg-neo-pink' },
-    { name: 'Marketing', members: 8, lead: 'Riley Quinn', color: 'bg-neo-yellow' },
-    { name: 'Support', members: 15, lead: 'Jamie Lane', color: 'bg-neo-green' },
-  ];
-
+const TeamsView = ({ teams, onAdd, onEdit, onDelete }: { 
+  teams: any[], 
+  onAdd: () => void, 
+  onEdit: (team: any) => void,
+  onDelete: (id: string) => void
+}) => {
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h2 className="text-4xl font-black uppercase tracking-tighter">Team <span className="text-primary">Structures</span></h2>
-        <NeoButton variant="primary">+ Create Team</NeoButton>
+        <h2 className="text-4xl font-black uppercase tracking-tighter dark:text-white">Team <span className="text-primary">Structures</span></h2>
+        <NeoButton variant="primary" onClick={onAdd}>+ Create Team</NeoButton>
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {teams.map((team, i) => (
-          <NeoCard key={i} title={team.name}>
+          <NeoCard key={i} title={team.name} className="dark:bg-slate-800 dark:text-white">
             <div className="flex justify-between items-center mt-2">
               <div className="space-y-1">
                 <p className="text-xs font-bold text-slate-500 uppercase">Team Lead</p>
@@ -594,8 +699,8 @@ const TeamsView = () => {
             </div>
             <div className={`h-2 w-full mt-4 neo-border ${team.color}`}></div>
             <div className="flex gap-2 mt-4">
-              <NeoButton variant="secondary" className="flex-1 text-[10px]">Manage</NeoButton>
-              <NeoButton variant="secondary" className="flex-1 text-[10px]">Settings</NeoButton>
+              <NeoButton variant="secondary" className="flex-1 text-[10px]" onClick={() => onEdit(team)}>Manage</NeoButton>
+              <NeoButton variant="secondary" className="flex-1 text-[10px] hover:bg-neo-pink hover:text-white" onClick={() => onDelete(team.id)}>Delete</NeoButton>
             </div>
           </NeoCard>
         ))}
@@ -606,14 +711,14 @@ const TeamsView = () => {
 
 const SettingsView = ({ settings, onUpdate }: { settings: any, onUpdate: (key: string, val: any) => void }) => (
   <div className="space-y-6">
-    <h2 className="text-4xl font-black uppercase tracking-tighter">System <span className="text-neo-yellow">Settings</span></h2>
+    <h2 className="text-4xl font-black uppercase tracking-tighter dark:text-white">System <span className="text-neo-yellow">Settings</span></h2>
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
       <NeoCard title="General Configuration">
         <div className="space-y-4 mt-4">
           <div className="space-y-1">
             <label className="text-xs font-black uppercase">Organization Name</label>
             <input 
-              className="w-full neo-border p-2 font-bold uppercase text-sm" 
+              className="w-full neo-border p-2 font-bold uppercase text-sm dark:bg-slate-700 dark:text-white" 
               value={settings.orgName} 
               onChange={(e) => onUpdate('orgName', e.target.value)}
             />
@@ -621,7 +726,7 @@ const SettingsView = ({ settings, onUpdate }: { settings: any, onUpdate: (key: s
           <div className="space-y-1">
             <label className="text-xs font-black uppercase">Admin Email</label>
             <input 
-              className="w-full neo-border p-2 font-bold text-sm" 
+              className="w-full neo-border p-2 font-bold text-sm dark:bg-slate-700 dark:text-white" 
               value={settings.adminEmail} 
               onChange={(e) => onUpdate('adminEmail', e.target.value)}
             />
@@ -629,24 +734,25 @@ const SettingsView = ({ settings, onUpdate }: { settings: any, onUpdate: (key: s
           <div className="flex items-center gap-3 pt-2">
             <input 
               type="checkbox" 
+              id="darkModeToggle"
               checked={settings.darkMode} 
               onChange={(e) => onUpdate('darkMode', e.target.checked)}
-              className="w-5 h-5 neo-border accent-black" 
+              className="w-5 h-5 neo-border accent-primary cursor-pointer" 
             />
-            <label className="text-xs font-black uppercase">Enable Dark Mode (Beta)</label>
+            <label htmlFor="darkModeToggle" className="text-xs font-black uppercase cursor-pointer">Enable Dark Mode (Beta)</label>
           </div>
         </div>
       </NeoCard>
       <NeoCard title="API Access Tokens">
         <div className="space-y-4 mt-4">
-          <div className="p-3 neo-border bg-slate-50 flex justify-between items-center">
+          <div className="p-3 neo-border bg-slate-50 dark:bg-slate-700 flex justify-between items-center">
             <div>
               <p className="text-[10px] font-black uppercase text-slate-400">Production Key</p>
               <p className="font-mono text-xs">bs_live_••••••••••••••••</p>
             </div>
             <NeoButton variant="secondary" className="text-[10px]" onClick={() => alert('Token Revoked')}>Revoke</NeoButton>
           </div>
-          <div className="p-3 neo-border bg-slate-50 flex justify-between items-center">
+          <div className="p-3 neo-border bg-slate-50 dark:bg-slate-700 flex justify-between items-center">
             <div>
               <p className="text-[10px] font-black uppercase text-slate-400">Staging Key</p>
               <p className="font-mono text-xs">bs_test_••••••••••••••••</p>
@@ -655,6 +761,21 @@ const SettingsView = ({ settings, onUpdate }: { settings: any, onUpdate: (key: s
           </div>
           <NeoButton variant="primary" className="w-full py-2 text-xs" onClick={() => alert('Generating Token...')}>+ Generate New Token</NeoButton>
         </div>
+      </NeoCard>
+      <NeoCard title="Danger Zone" className="border-red-500">
+        <p className="text-xs font-bold text-red-500 uppercase mb-4">Irreversible actions. Use with extreme caution.</p>
+        <NeoButton 
+          variant="secondary" 
+          className="w-full border-red-500 text-red-500 hover:bg-red-500 hover:text-white"
+          onClick={() => {
+            if (confirm('Wipe all local data? This will reset the app to factory defaults.')) {
+              localStorage.clear();
+              window.location.reload();
+            }
+          }}
+        >
+          Factory Reset App
+        </NeoButton>
       </NeoCard>
     </div>
   </div>
@@ -671,7 +792,7 @@ const ProfileView = ({ user, onUpdate }: { user: User, onUpdate: (u: Partial<Use
           <img src={user.avatar} alt={user.name} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
         </div>
         <div>
-          <h2 className="text-4xl font-black uppercase tracking-tighter">{user.name}</h2>
+          <h2 className="text-4xl font-black uppercase tracking-tighter dark:text-white">{user.name}</h2>
           <p className="text-xl font-bold text-primary uppercase">{user.role}</p>
         </div>
       </div>
@@ -682,7 +803,7 @@ const ProfileView = ({ user, onUpdate }: { user: User, onUpdate: (u: Partial<Use
             <div className="space-y-1">
               <label className="text-xs font-black uppercase">Full Name</label>
               <input 
-                className="w-full neo-border p-2 font-bold uppercase text-sm" 
+                className="w-full neo-border p-2 font-bold uppercase text-sm dark:bg-slate-700 dark:text-white" 
                 value={name} 
                 onChange={(e) => setName(e.target.value)}
               />
@@ -690,7 +811,7 @@ const ProfileView = ({ user, onUpdate }: { user: User, onUpdate: (u: Partial<Use
             <div className="space-y-1">
               <label className="text-xs font-black uppercase">Email Address</label>
               <input 
-                className="w-full neo-border p-2 font-bold text-sm" 
+                className="w-full neo-border p-2 font-bold text-sm dark:bg-slate-700 dark:text-white" 
                 value={email} 
                 onChange={(e) => setEmail(e.target.value)}
               />
@@ -701,19 +822,19 @@ const ProfileView = ({ user, onUpdate }: { user: User, onUpdate: (u: Partial<Use
 
         <NeoCard title="Account Security">
           <div className="space-y-4 mt-4">
-            <div className="flex justify-between items-center p-3 neo-border bg-slate-50">
+            <div className="flex justify-between items-center p-3 neo-border bg-slate-50 dark:bg-slate-700">
               <div>
                 <p className="text-xs font-black uppercase">Two-Factor Auth</p>
                 <p className="text-[10px] font-bold text-slate-500 uppercase">Enabled via Authenticator App</p>
               </div>
-              <NeoButton variant="secondary" className="text-[10px]">Manage</NeoButton>
+              <NeoButton variant="secondary" className="text-[10px]" onClick={() => alert('2FA Settings')}>Manage</NeoButton>
             </div>
-            <div className="flex justify-between items-center p-3 neo-border bg-slate-50">
+            <div className="flex justify-between items-center p-3 neo-border bg-slate-50 dark:bg-slate-700">
               <div>
                 <p className="text-xs font-black uppercase">Password</p>
                 <p className="text-[10px] font-bold text-slate-500 uppercase">Last changed 3 months ago</p>
               </div>
-              <NeoButton variant="secondary" className="text-[10px]">Change</NeoButton>
+              <NeoButton variant="secondary" className="text-[10px]" onClick={() => alert('Change Password')}>Change</NeoButton>
             </div>
           </div>
         </NeoCard>
@@ -727,8 +848,8 @@ const NotificationDropdown = ({ notifications, onMarkRead, onClose }: {
   onMarkRead: (id: string) => void,
   onClose: () => void
 }) => (
-  <div className="absolute top-16 right-0 w-80 bg-white neo-border-thick neo-shadow z-[100] p-4">
-    <div className="flex justify-between items-center mb-4 border-b-2 border-black pb-2">
+  <div className="absolute top-16 right-0 w-80 bg-white dark:bg-slate-800 dark:text-white neo-border-thick neo-shadow z-[100] p-4">
+    <div className="flex justify-between items-center mb-4 border-b-2 border-black dark:border-white pb-2">
       <h3 className="font-black uppercase text-sm">Notifications</h3>
       <button onClick={onClose}><X size={16} /></button>
     </div>
@@ -737,7 +858,7 @@ const NotificationDropdown = ({ notifications, onMarkRead, onClose }: {
         <div 
           key={n.id} 
           onClick={() => onMarkRead(n.id)}
-          className={`p-3 neo-border cursor-pointer transition-all hover:bg-slate-50 ${n.read ? 'opacity-60' : 'bg-primary/5 border-primary'}`}
+          className={`p-3 neo-border cursor-pointer transition-all hover:bg-slate-50 dark:hover:bg-slate-700 ${n.read ? 'opacity-60' : 'bg-primary/5 border-primary dark:bg-primary/10'}`}
         >
           <div className="flex items-center gap-2 mb-1">
             {n.type === 'success' && <CheckCircle2 size={14} className="text-green-600" />}
@@ -759,32 +880,136 @@ const NotificationDropdown = ({ notifications, onMarkRead, onClose }: {
 // --- Main App ---
 
 export default function App() {
+  const [isLoggedIn, setIsLoggedIn] = useState(() => {
+    return localStorage.getItem('bs_isLoggedIn') === 'true';
+  });
   const [activeView, setActiveView] = useState('dashboard');
-  const [users, setUsers] = useState<User[]>(MOCK_USERS);
-  const [rules, setRules] = useState<AutomationRule[]>(MOCK_RULES);
-  const [permissions, setPermissions] = useState<Permission[]>(MOCK_PERMISSIONS);
+  const [users, setUsers] = useState<User[]>(() => {
+    const saved = localStorage.getItem('bs_users');
+    return saved ? JSON.parse(saved) : MOCK_USERS;
+  });
+  const [rules, setRules] = useState<AutomationRule[]>(() => {
+    const saved = localStorage.getItem('bs_rules');
+    return saved ? JSON.parse(saved) : MOCK_RULES;
+  });
+  const [permissions, setPermissions] = useState<Permission[]>(() => {
+    const saved = localStorage.getItem('bs_permissions');
+    return saved ? JSON.parse(saved) : MOCK_PERMISSIONS;
+  });
   const [logs] = useState<ExecutionLog[]>(MOCK_LOGS);
-  const [notifications, setNotifications] = useState<Notification[]>(MOCK_NOTIFICATIONS);
+  const [notifications, setNotifications] = useState<Notification[]>(() => {
+    const saved = localStorage.getItem('bs_notifications');
+    return saved ? JSON.parse(saved) : MOCK_NOTIFICATIONS;
+  });
   const [analytics] = useState<AnalyticsData[]>(MOCK_ANALYTICS);
   const [globalSearch, setGlobalSearch] = useState('');
   const [showNotifications, setShowNotifications] = useState(false);
-  const [securityPolicies, setSecurityPolicies] = useState({
-    require2FA: true,
-    autoLock: false,
-    restrictIP: true
+  const [securityPolicies, setSecurityPolicies] = useState(() => {
+    const saved = localStorage.getItem('bs_securityPolicies');
+    const defaults = {
+      require2FA: true,
+      autoLock: false,
+      restrictIP: true
+    };
+    try {
+      return saved ? { ...defaults, ...JSON.parse(saved) } : defaults;
+    } catch (e) {
+      return defaults;
+    }
   });
-  const [settings, setSettings] = useState({
-    orgName: 'BrutalSuite Enterprise',
-    adminEmail: 'admin@brutalsuite.io',
-    darkMode: false
+  const [settings, setSettings] = useState(() => {
+    const saved = localStorage.getItem('bs_settings');
+    const defaults = {
+      orgName: 'BrutalSuite Enterprise',
+      adminEmail: 'admin@brutalsuite.io',
+      darkMode: false
+    };
+    try {
+      return saved ? { ...defaults, ...JSON.parse(saved) } : defaults;
+    } catch (e) {
+      return defaults;
+    }
   });
-  const [auditLogs, setAuditLogs] = useState([
-    { user: 'Alex R.', action: 'Updated Role: Editor', time: '10m ago' },
-    { user: 'System', action: 'Auto-backup completed', time: '1h ago' },
-    { user: 'Morgan L.', action: 'Deleted User: Taylor W.', time: '3h ago' },
-  ]);
+  const [auditLogs, setAuditLogs] = useState(() => {
+    const saved = localStorage.getItem('bs_auditLogs');
+    return saved ? JSON.parse(saved) : [
+      { user: 'Alex R.', action: 'Updated Role: Editor', time: '10m ago' },
+      { user: 'System', action: 'Auto-backup completed', time: '1h ago' },
+      { user: 'Morgan L.', action: 'Deleted User: Taylor W.', time: '3h ago' },
+    ];
+  });
 
-  const currentUser = users[0]; // Alex Rivera
+  const [teams, setTeams] = useState(() => {
+    const saved = localStorage.getItem('bs_teams');
+    return saved ? JSON.parse(saved) : [
+      { id: 't1', name: 'Engineering', members: 12, lead: 'Alex Rivera', color: 'bg-primary' },
+      { id: 't2', name: 'Design', members: 5, lead: 'Jordan Smith', color: 'bg-neo-pink' },
+      { id: 't3', name: 'Marketing', members: 8, lead: 'Riley Quinn', color: 'bg-neo-yellow' },
+      { id: 't4', name: 'Support', members: 15, lead: 'Jamie Lane', color: 'bg-neo-green' },
+    ];
+  });
+
+  // Modal State
+  const [modal, setModal] = useState<{ type: string, data?: any } | null>(null);
+
+  // Persistence Effects
+  useEffect(() => {
+    localStorage.setItem('bs_users', JSON.stringify(users));
+  }, [users]);
+  useEffect(() => {
+    localStorage.setItem('bs_rules', JSON.stringify(rules));
+  }, [rules]);
+  useEffect(() => {
+    localStorage.setItem('bs_permissions', JSON.stringify(permissions));
+  }, [permissions]);
+  useEffect(() => {
+    localStorage.setItem('bs_notifications', JSON.stringify(notifications));
+  }, [notifications]);
+  useEffect(() => {
+    localStorage.setItem('bs_securityPolicies', JSON.stringify(securityPolicies));
+  }, [securityPolicies]);
+  useEffect(() => {
+    localStorage.setItem('bs_settings', JSON.stringify(settings));
+  }, [settings]);
+  useEffect(() => {
+    localStorage.setItem('bs_auditLogs', JSON.stringify(auditLogs));
+  }, [auditLogs]);
+  useEffect(() => {
+    localStorage.setItem('bs_teams', JSON.stringify(teams));
+  }, [teams]);
+  useEffect(() => {
+    localStorage.setItem('bs_isLoggedIn', isLoggedIn.toString());
+  }, [isLoggedIn]);
+
+  // Dark Mode Effect
+  useEffect(() => {
+    const root = window.document.documentElement;
+    console.log('Dark mode effect running. Mode:', settings.darkMode);
+    if (settings.darkMode) {
+      root.classList.add('dark');
+      root.style.colorScheme = 'dark';
+    } else {
+      root.classList.remove('dark');
+      root.style.colorScheme = 'light';
+    }
+  }, [settings.darkMode]);
+
+  const currentUser = users[0] || MOCK_USERS[0];
+
+  const addAuditLog = (action: string) => {
+    setAuditLogs([{ user: currentUser.name.split(' ')[0] + '.', action, time: 'Just now' }, ...auditLogs.slice(0, 9)]);
+  };
+
+  const handleLogin = (e: FormEvent) => {
+    e.preventDefault();
+    setIsLoggedIn(true);
+    addAuditLog('User logged in');
+  };
+
+  const handleLogout = () => {
+    setIsLoggedIn(false);
+    setActiveView('dashboard');
+  };
 
   const filteredUsers = useMemo(() => {
     if (!globalSearch) return users;
@@ -807,6 +1032,7 @@ export default function App() {
   };
 
   const handleUpdateSettings = (key: string, val: any) => {
+    console.log(`Updating setting ${key} to:`, val);
     setSettings(prev => ({ ...prev, [key]: val }));
   };
 
@@ -814,38 +1040,43 @@ export default function App() {
     setNotifications(notifications.map(n => n.id === id ? { ...n, read: true } : n));
   };
 
-  const handleAddUser = () => {
-    const name = prompt('Enter user name:');
-    if (!name) return;
-    const email = prompt('Enter email:');
-    if (!email) return;
-    
+  const handleAddUser = (userData: Partial<User>) => {
     const newUser: User = {
       id: Math.random().toString(36).substr(2, 9),
-      name,
-      email,
-      role: 'Viewer',
+      name: userData.name || 'New User',
+      email: userData.email || 'user@example.com',
+      role: (userData.role as any) || 'Viewer',
       status: 'Pending',
       lastActive: 'Never',
-      avatar: `https://picsum.photos/seed/${name}/100`
+      avatar: `https://picsum.photos/seed/${userData.name}/100`
     };
     setUsers([newUser, ...users]);
+    addAuditLog(`Added user: ${newUser.name}`);
+    setModal(null);
   };
 
   const handleEditUser = (user: User) => {
-    const newName = prompt('Edit name:', user.name);
-    if (!newName) return;
-    setUsers(users.map(u => u.id === user.id ? { ...u, name: newName } : u));
+    setModal({ type: 'edit_user', data: user });
+  };
+
+  const handleUpdateUser = (id: string, updates: Partial<User>) => {
+    setUsers(users.map(u => u.id === id ? { ...u, ...updates } : u));
+    addAuditLog(`Updated user: ${users.find(u => u.id === id)?.name}`);
+    setModal(null);
   };
 
   const handleDeleteUser = (id: string) => {
-    if (confirm('Are you sure you want to delete this user?')) {
+    const userToDelete = users.find(u => u.id === id);
+    if (userToDelete && confirm(`Are you sure you want to delete ${userToDelete.name}?`)) {
       setUsers(users.filter(u => u.id !== id));
+      addAuditLog(`Deleted user: ${userToDelete.name}`);
     }
   };
 
   const handleToggleRule = (id: string) => {
+    const rule = rules.find(r => r.id === id);
     setRules(rules.map(r => r.id === id ? { ...r, active: !r.active } : r));
+    addAuditLog(`${rule?.active ? 'Disabled' : 'Enabled'} rule: ${rule?.name}`);
   };
 
   const handleTogglePermission = (index: number, field: 'read' | 'write' | 'delete') => {
@@ -858,23 +1089,50 @@ export default function App() {
   };
 
   const handleSavePermissions = () => {
+    addAuditLog('Updated system permissions');
     alert('Permissions saved successfully!');
   };
 
-  const handleAddRule = () => {
-    const name = prompt('Rule Name:');
-    if (!name) return;
-    const description = prompt('Description:');
-    if (!description) return;
-    
+  const handleAddRule = (ruleData: Partial<AutomationRule>) => {
     const newRule: AutomationRule = {
       id: Math.random().toString(36).substr(2, 9),
-      name,
-      description,
+      name: ruleData.name || 'New Rule',
+      description: ruleData.description || 'No description',
       status: 'bg-neo-green',
       active: true
     };
     setRules([newRule, ...rules]);
+    addAuditLog(`Created rule: ${newRule.name}`);
+    setModal(null);
+  };
+
+  const handleAddTeam = (teamData: any) => {
+    const newTeam = {
+      id: Math.random().toString(36).substr(2, 9),
+      ...teamData,
+      members: 0
+    };
+    setTeams([...teams, newTeam]);
+    addAuditLog(`Created team: ${newTeam.name}`);
+    setModal(null);
+  };
+
+  const handleEditTeam = (team: any) => {
+    setModal({ type: 'edit_team', data: team });
+  };
+
+  const handleUpdateTeam = (id: string, updates: any) => {
+    setTeams(teams.map(t => t.id === id ? { ...t, ...updates } : t));
+    addAuditLog(`Updated team: ${teams.find(t => t.id === id)?.name}`);
+    setModal(null);
+  };
+
+  const handleDeleteTeam = (id: string) => {
+    const team = teams.find(t => t.id === id);
+    if (team && confirm(`Are you sure you want to delete ${team.name}?`)) {
+      setTeams(teams.filter(t => t.id !== id));
+      addAuditLog(`Deleted team: ${team.name}`);
+    }
   };
 
   const renderView = () => {
@@ -886,19 +1144,26 @@ export default function App() {
           analytics={analytics}
           onToggleRule={handleToggleRule} 
           onViewAllRules={() => alert(`Total Rules: ${rules.length}`)} 
-          onCreateRule={handleAddRule}
+          onCreateRule={() => setModal({ type: 'add_rule' })}
         />
       );
       case 'users': return (
         <UserDirectory 
           users={filteredUsers} 
-          onAdd={handleAddUser} 
+          onAdd={() => setModal({ type: 'add_user' })} 
           onEdit={handleEditUser} 
           onDelete={handleDeleteUser} 
         />
       );
       case 'analytics': return <AnalyticsView data={analytics} />;
-      case 'teams': return <TeamsView />;
+      case 'teams': return (
+        <TeamsView 
+          teams={teams} 
+          onAdd={() => setModal({ type: 'add_team' })} 
+          onEdit={handleEditTeam}
+          onDelete={handleDeleteTeam}
+        />
+      );
       case 'settings': return <SettingsView settings={settings} onUpdate={handleUpdateSettings} />;
       case 'profile': return <ProfileView user={currentUser} onUpdate={handleUpdateProfile} />;
       case 'roles': return (
@@ -914,7 +1179,7 @@ export default function App() {
       default: return (
         <UserDirectory 
           users={filteredUsers} 
-          onAdd={handleAddUser} 
+          onAdd={() => setModal({ type: 'add_user' })} 
           onEdit={handleEditUser} 
           onDelete={handleDeleteUser} 
         />
@@ -922,10 +1187,176 @@ export default function App() {
     }
   };
 
+  if (!isLoggedIn) {
+    return (
+      <LoginScreen 
+        onLogin={handleLogin} 
+        darkMode={settings.darkMode} 
+        onToggleTheme={() => handleUpdateSettings('darkMode', !settings.darkMode)} 
+      />
+    );
+  }
+
   return (
-    <div className="flex flex-col min-h-screen">
+    <div className="flex flex-col min-h-screen transition-colors duration-300 dark:bg-slate-900">
+      {/* Modals */}
+      {modal?.type === 'add_user' && (
+        <Modal title="Add New Member" onClose={() => setModal(null)}>
+          <form onSubmit={(e) => {
+            e.preventDefault();
+            const formData = new FormData(e.currentTarget);
+            handleAddUser({
+              name: formData.get('name') as string,
+              email: formData.get('email') as string,
+              role: formData.get('role') as any
+            });
+          }} className="space-y-4">
+            <div className="space-y-1">
+              <label className="text-xs font-black uppercase">Full Name</label>
+              <input name="name" required className="w-full neo-border p-3 font-bold uppercase text-sm" placeholder="John Doe" />
+            </div>
+            <div className="space-y-1">
+              <label className="text-xs font-black uppercase">Email Address</label>
+              <input name="email" type="email" required className="w-full neo-border p-3 font-bold text-sm" placeholder="john@example.com" />
+            </div>
+            <div className="space-y-1">
+              <label className="text-xs font-black uppercase">Role</label>
+              <select name="role" className="w-full neo-border p-3 font-bold uppercase text-sm bg-white">
+                <option value="Viewer">Viewer</option>
+                <option value="Editor">Editor</option>
+                <option value="Admin">Admin</option>
+              </select>
+            </div>
+            <NeoButton type="submit" variant="primary" className="w-full mt-4 py-4">Create Account</NeoButton>
+          </form>
+        </Modal>
+      )}
+
+      {modal?.type === 'edit_user' && (
+        <Modal title="Update Member" onClose={() => setModal(null)}>
+          <form onSubmit={(e) => {
+            e.preventDefault();
+            const formData = new FormData(e.currentTarget);
+            handleUpdateUser(modal.data.id, {
+              name: formData.get('name') as string,
+              email: formData.get('email') as string,
+              role: formData.get('role') as any
+            });
+          }} className="space-y-4">
+            <div className="space-y-1">
+              <label className="text-xs font-black uppercase">Full Name</label>
+              <input name="name" defaultValue={modal.data.name} required className="w-full neo-border p-3 font-bold uppercase text-sm" />
+            </div>
+            <div className="space-y-1">
+              <label className="text-xs font-black uppercase">Email Address</label>
+              <input name="email" type="email" defaultValue={modal.data.email} required className="w-full neo-border p-3 font-bold text-sm" />
+            </div>
+            <div className="space-y-1">
+              <label className="text-xs font-black uppercase">Role</label>
+              <select name="role" defaultValue={modal.data.role} className="w-full neo-border p-3 font-bold uppercase text-sm bg-white">
+                <option value="Viewer">Viewer</option>
+                <option value="Editor">Editor</option>
+                <option value="Admin">Admin</option>
+              </select>
+            </div>
+            <NeoButton type="submit" variant="primary" className="w-full mt-4 py-4">Save Changes</NeoButton>
+          </form>
+        </Modal>
+      )}
+
+      {modal?.type === 'add_rule' && (
+        <Modal title="New Automation" onClose={() => setModal(null)}>
+          <form onSubmit={(e) => {
+            e.preventDefault();
+            const formData = new FormData(e.currentTarget);
+            handleAddRule({
+              name: formData.get('name') as string,
+              description: formData.get('description') as string
+            });
+          }} className="space-y-4">
+            <div className="space-y-1">
+              <label className="text-xs font-black uppercase">Rule Name</label>
+              <input name="name" required className="w-full neo-border p-3 font-bold uppercase text-sm" placeholder="Data Sync" />
+            </div>
+            <div className="space-y-1">
+              <label className="text-xs font-black uppercase">Description</label>
+              <textarea name="description" required className="w-full neo-border p-3 font-bold text-sm h-24" placeholder="Describe the automation flow..." />
+            </div>
+            <NeoButton type="submit" variant="primary" className="w-full mt-4 py-4">Deploy Rule</NeoButton>
+          </form>
+        </Modal>
+      )}
+
+      {modal?.type === 'add_team' && (
+        <Modal title="Create New Team" onClose={() => setModal(null)}>
+          <form onSubmit={(e) => {
+            e.preventDefault();
+            const formData = new FormData(e.currentTarget);
+            handleAddTeam({
+              name: formData.get('name') as string,
+              lead: formData.get('lead') as string,
+              color: formData.get('color') as string
+            });
+          }} className="space-y-4">
+            <div className="space-y-1">
+              <label className="text-xs font-black uppercase">Team Name</label>
+              <input name="name" required className="w-full neo-border p-3 font-bold uppercase text-sm" placeholder="Engineering" />
+            </div>
+            <div className="space-y-1">
+              <label className="text-xs font-black uppercase">Team Lead</label>
+              <input name="lead" required className="w-full neo-border p-3 font-bold uppercase text-sm" placeholder="Alex Rivera" />
+            </div>
+            <div className="space-y-1">
+              <label className="text-xs font-black uppercase">Accent Color</label>
+              <select name="color" className="w-full neo-border p-3 font-bold uppercase text-sm bg-white">
+                <option value="bg-primary">Primary (Orange)</option>
+                <option value="bg-neo-pink">Pink</option>
+                <option value="bg-neo-yellow">Yellow</option>
+                <option value="bg-neo-green">Green</option>
+                <option value="bg-black">Black</option>
+              </select>
+            </div>
+            <NeoButton type="submit" variant="primary" className="w-full mt-4 py-4">Initialize Team</NeoButton>
+          </form>
+        </Modal>
+      )}
+
+      {modal?.type === 'edit_team' && (
+        <Modal title="Manage Team" onClose={() => setModal(null)}>
+          <form onSubmit={(e) => {
+            e.preventDefault();
+            const formData = new FormData(e.currentTarget);
+            handleUpdateTeam(modal.data.id, {
+              name: formData.get('name') as string,
+              lead: formData.get('lead') as string,
+              color: formData.get('color') as string
+            });
+          }} className="space-y-4">
+            <div className="space-y-1">
+              <label className="text-xs font-black uppercase">Team Name</label>
+              <input name="name" defaultValue={modal.data.name} required className="w-full neo-border p-3 font-bold uppercase text-sm" />
+            </div>
+            <div className="space-y-1">
+              <label className="text-xs font-black uppercase">Team Lead</label>
+              <input name="lead" defaultValue={modal.data.lead} required className="w-full neo-border p-3 font-bold uppercase text-sm" />
+            </div>
+            <div className="space-y-1">
+              <label className="text-xs font-black uppercase">Accent Color</label>
+              <select name="color" defaultValue={modal.data.color} className="w-full neo-border p-3 font-bold uppercase text-sm bg-white">
+                <option value="bg-primary">Primary (Orange)</option>
+                <option value="bg-neo-pink">Pink</option>
+                <option value="bg-neo-yellow">Yellow</option>
+                <option value="bg-neo-green">Green</option>
+                <option value="bg-black">Black</option>
+              </select>
+            </div>
+            <NeoButton type="submit" variant="primary" className="w-full mt-4 py-4">Save Changes</NeoButton>
+          </form>
+        </Modal>
+      )}
+
       {/* Header */}
-      <header className="neo-border-thick bg-white px-6 py-4 flex items-center justify-between sticky top-0 z-50 m-4 neo-shadow">
+      <header className="neo-border-thick bg-white dark:bg-slate-800 dark:text-white px-6 py-4 flex items-center justify-between sticky top-0 z-50 m-4 neo-shadow">
         <div className="flex items-center gap-8">
           <div className="flex items-center gap-3">
             <div className="bg-primary neo-border p-2 flex items-center justify-center">
@@ -946,7 +1377,7 @@ export default function App() {
               <Search className="text-slate-500" size={18} />
             </div>
             <input 
-              className="neo-border bg-white w-full py-2 pl-10 pr-4 text-sm font-bold focus:ring-0 focus:outline-none uppercase" 
+              className="neo-border bg-white dark:bg-slate-700 w-full py-2 pl-10 pr-4 text-sm font-bold focus:ring-0 focus:outline-none uppercase" 
               placeholder="Search..." 
               type="text"
               value={globalSearch}
@@ -954,6 +1385,14 @@ export default function App() {
             />
           </div>
           <div className="flex gap-2 relative">
+            <NeoButton 
+              variant="secondary" 
+              className="p-2"
+              onClick={() => handleUpdateSettings('darkMode', !settings.darkMode)}
+              title={settings.darkMode ? "Switch to Light Mode" : "Switch to Dark Mode"}
+            >
+              {settings.darkMode ? <Sun size={20} className="text-neo-yellow" /> : <Moon size={20} />}
+            </NeoButton>
             <NeoButton 
               variant="secondary" 
               className={`p-2 relative ${showNotifications ? 'bg-primary/20' : ''}`}
@@ -972,6 +1411,14 @@ export default function App() {
               onClick={() => setActiveView('profile')}
             >
               <UserIcon size={20} />
+            </NeoButton>
+            <NeoButton 
+              variant="black" 
+              className="p-2"
+              onClick={handleLogout}
+              title="Logout"
+            >
+              <LogOut size={20} />
             </NeoButton>
 
             <AnimatePresence>
@@ -996,7 +1443,7 @@ export default function App() {
       <div className="flex-1 flex flex-col lg:flex-row p-4 gap-6">
         {/* Sidebar */}
         <aside className="w-full lg:w-64 flex flex-col gap-4">
-          <div className="neo-border-thick bg-white p-4 neo-shadow">
+          <div className="neo-border-thick bg-white dark:bg-slate-800 dark:text-white p-4 neo-shadow">
             <div className="flex items-center gap-3 mb-6">
               <div className="w-12 h-12 neo-border overflow-hidden bg-primary/10 flex items-center justify-center">
                 <Zap className="text-primary" size={24} />
@@ -1040,9 +1487,9 @@ export default function App() {
             </nav>
           </div>
 
-          <div className="neo-border bg-primary/10 p-4">
+          <div className="neo-border bg-primary/10 dark:bg-primary/20 p-4 dark:text-white">
             <p className="text-[10px] font-black uppercase mb-2">Storage Status</p>
-            <div className="h-4 w-full neo-border bg-white">
+            <div className="h-4 w-full neo-border bg-white dark:bg-slate-700">
               <div className="h-full bg-primary" style={{ width: '65%' }}></div>
             </div>
             <p className="text-[10px] font-black uppercase mt-1">65% Capacity</p>
@@ -1067,17 +1514,17 @@ export default function App() {
 
       {/* Footer Stats */}
       <footer className="p-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="neo-border bg-white p-4 neo-shadow-sm flex justify-between items-center">
+        <div className="neo-border bg-white dark:bg-slate-800 p-4 neo-shadow-sm flex justify-between items-center">
           <span className="text-xs font-black uppercase tracking-widest">Total Users</span>
           <span className="text-2xl font-black">1,284</span>
         </div>
-        <div className="neo-border bg-white p-4 neo-shadow-sm flex justify-between items-center">
+        <div className="neo-border bg-white dark:bg-slate-800 p-4 neo-shadow-sm flex justify-between items-center">
           <span className="text-xs font-black uppercase tracking-widest">Active Now</span>
-          <span className="text-2xl font-black text-green-500">42</span>
+          <span className="text-2xl font-black text-green-500 dark:text-neo-green">42</span>
         </div>
-        <div className="neo-border bg-white p-4 neo-shadow-sm flex justify-between items-center">
+        <div className="neo-border bg-white dark:bg-slate-800 p-4 neo-shadow-sm flex justify-between items-center">
           <span className="text-xs font-black uppercase tracking-widest">Pending</span>
-          <span className="text-2xl font-black text-yellow-500">18</span>
+          <span className="text-2xl font-black text-yellow-500 dark:text-neo-yellow">18</span>
         </div>
         <div className="neo-border bg-primary text-white p-4 neo-shadow-sm flex justify-between items-center">
           <span className="text-xs font-black uppercase tracking-widest">System Status</span>
